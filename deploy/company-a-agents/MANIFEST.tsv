@@ -1,0 +1,24 @@
+# <REDACTED_COMPANY> desk — version-controlled agent-prompt manifest.  TAB-separated.
+# Maps each AGENTS.md mirror in this dir to its live Paperclip agent + intended org placement.
+# Company: <REDACTED_COMPANY>  (id <REDACTED_UUID>, prefix CEL)
+# kind: existing = already live (has an id; sync-agents.sh diff/pull/push operates on it)
+#       new      = authored here, NOT yet created live (id "-"; create via the Paperclip API, see README.md)
+# reportsTo = the agent's MANAGER (org placement). DOCUMENTATION ONLY — sync-agents.sh syncs prompt
+#       bodies, never reportsTo; org edges are set via PATCH /api/agents/<id> {reportsTo} (existing) or
+#       at agent creation (new). Desk-execution roles (Trader/PM/Execution) sit under the CIO; the
+#       independent risk / eval / critic + research / eng roles stay under the CEO (separation of duties).
+file	agent_id	name	adapter	kind	reportsTo
+trader-v2.AGENTS.md	<REDACTED_UUID>	TraderV2	codex_local	existing	CIO
+risk-governor.AGENTS.md	<REDACTED_UUID>	Risk-Governor	codex_local	existing	CEO
+cio.AGENTS.md	<REDACTED_UUID>	CIO	codex_local	existing	CEO
+auditor.AGENTS.md	<REDACTED_UUID>	Auditor	codex_local	existing	CEO
+position-manager.AGENTS.md	<REDACTED_UUID>	Position-Manager	codex_local	existing	CIO
+founding-engineer.AGENTS.md	<REDACTED_UUID>	Founding Engineer	opensage	existing	CEO
+researcher.AGENTS.md	<REDACTED_UUID>	Researcher	codex_local	existing	CEO
+trader-v1.AGENTS.md	<REDACTED_UUID>	Trader	codex_local	existing	CEO
+ceo.AGENTS.md	<REDACTED_UUID>	Chief Executive Officer	codex_local	existing	-
+trader-v2-futures.AGENTS.md	-	TraderV2-Futures	codex_local	new	CIO
+risk-governor-futures.AGENTS.md	-	Risk-Governor-Futures	codex_local	new	CEO
+position-manager-futures.AGENTS.md	-	Position-Manager-Futures	codex_local	new	CIO
+skeptic.AGENTS.md	-	Skeptic	codex_local	new	CEO
+execution.AGENTS.md	-	Execution	codex_local	new	CIO

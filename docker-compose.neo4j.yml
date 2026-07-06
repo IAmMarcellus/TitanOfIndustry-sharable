@@ -1,0 +1,24 @@
+# Neo4j Community for TitanOfIndustry shared memory. `make neo4j` / `make neo4j-stop`.
+# Password and local port mappings are read from .env.
+# Data persists in the named volume across restarts (that's what makes memory durable).
+# The Graph Data Science plugin (free Community tier) powers the `make memory-graph` layer
+# (topic clusters + importance); NEO4J_PLUGINS auto-allowlists gds.* procedures.
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: titanofindustry-neo4j
+    ports:
+      - "${NEO4J_HTTP_PORT:?set NEO4J_HTTP_PORT}:${NEO4J_HTTP_PORT:?set NEO4J_HTTP_PORT}"
+      - "${NEO4J_BOLT_PORT:?set NEO4J_BOLT_PORT}:${NEO4J_BOLT_PORT:?set NEO4J_BOLT_PORT}"
+    environment:
+      NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD:?set NEO4J_PASSWORD in .env}"
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_server_memory_heap_initial__size: "1G"
+      NEO4J_server_memory_heap_max__size: "2G"
+      NEO4J_server_memory_pagecache_size: "512M"
+    volumes:
+      - neo4j_data:/data
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:

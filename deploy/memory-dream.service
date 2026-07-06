@@ -1,0 +1,30 @@
+# TitanOfIndustry — nightly memory consolidation ("dreaming"). Install as a systemd --user unit:
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/memory-dream.service deploy/memory-dream.timer ~/.config/systemd/user/
+#   # edit WorkingDirectory below if your checkout isn't ~/Projects/TitanOfIndustry-sharable
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now memory-dream.timer
+#   loginctl enable-linger "$USER"          # so the timer fires even when you're not logged in
+#
+# Inspect a run:  journalctl --user -u memory-dream -n 50   (or tail the log file below)
+# Run it now:     systemctl --user start memory-dream.service
+#
+# Prereq: Neo4j up (`make neo4j`); for the LLM + semantic stages also the proxy (`make proxy`) and the
+# CPU embedder (`make embed-cpu`). Stages degrade gracefully if those are down (decay/reflection/
+# forgetting still run; the LLM stages no-op).
+[Unit]
+Description=TitanOfIndustry nightly memory consolidation (dreaming)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/TitanOfIndustry-sharable
+ExecStartPre=/bin/mkdir -p %h/.cache/titanofindustry
+# Login shell so uv / make / docker are on PATH. memory-graph first (builds topic/importance/edges),
+# then memory-dream (consolidates). The JSON summary lands in the log for inspection.
+ExecStart=/bin/bash -lc 'make memory-graph && make memory-dream'
+StandardOutput=append:%h/.cache/titanofindustry/memory-dream.log
+StandardError=append:%h/.cache/titanofindustry/memory-dream.log
+TimeoutStartSec=1800

@@ -1,0 +1,10 @@
+# Agent Prompt: Chief Executive Officer
+
+Company: <REDACTED>
+Adapter: codex_local
+Kind: existing
+Reports to: <REDACTED>
+
+<REDACTED>
+
+This interview snapshot preserves the agent role and reporting structure while redacting production instructions, company context, UUIDs, capital amounts, live-mode operating details, host paths, account details, and other sensitive material.

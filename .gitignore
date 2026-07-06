@@ -1,0 +1,34 @@
+# Secrets / local env
+.env
+.env.local
+*.local
+vendor/paperclip/server/.env
+vendor/paperclip/mobile/.env.local
+selfIdentity.plist
+debank-token-cache.json
+
+# Python (uv / venv)
+.venv/
+__pycache__/
+*.pyc
+.python-version
+
+# Node
+node_modules/
+
+# OpenCode / OpenSage local state
+.opencode/
+opencode-state/
+
+# Model caches (never commit weights)
+models/
+*.safetensors
+*.gguf
+hf_cache/
+
+# Logs / scratch
+*.log
+scratch/
+
+# Playwright MCP session output (console logs + page snapshots)
+.playwright-mcp/

@@ -1,0 +1,86 @@
+# LiteLLM proxy for TitanOfIndustry — ONE OpenAI-compatible endpoint in front of the model backend.
+#
+# Backend = the locally configured Ollama-compatible endpoint. The proxy still does two jobs:
+#   1. ROUTING: OpenSage's ensemble builds LiteLlm(model=name) with no per-model base_url, so a gateway
+#      is the only way to reach a backend by model name.
+#   2. CONCURRENCY BACKSTOP: global + per-model request caps so many agents can't swamp the one GPU.
+#
+# All model traffic flows through this (OpenSage OPENAI_BASE_URL, OpenCode baseURL). Backend URLs and
+# keys come from env.
+
+model_list:
+  # TEXT / code model.
+  - model_name: qwen-codex
+    litellm_params:
+      model: openai/qwen-codex            # litellm strips openai/ -> sends model=qwen-codex to Ollama
+      api_base: os.environ/OLLAMA_BASE_URL
+      api_key: os.environ/OLLAMA_API_KEY
+      max_parallel_requests: 4
+      # Deterministic code edits: pin a low temp for the EXECUTOR. The Ollama model's baked default is
+      # temperature=1 (fine for chat, too hot for code) and OpenCode sends none, so without this its
+      # edits would run at 1. A request that DOES set temperature still overrides this default.
+      temperature: 0.2
+
+  # VISION — the same Ollama model is vision-capable, so qwen-vl routes to it (no separate engine).
+  - model_name: qwen-vl
+    litellm_params:
+      model: openai/qwen-codex
+      api_base: os.environ/OLLAMA_BASE_URL
+      api_key: os.environ/OLLAMA_API_KEY
+      max_parallel_requests: 2
+
+  # VOICE brain — same Ollama backend as qwen-codex, separate alias so a live voice turn never queues
+  # behind the coder alias's 4-slot cap at the PROXY level. Honest limits: Ollama itself still
+  # serializes generations on the one GPU (OLLAMA_NUM_PARALLEL defaults to 1, and raising it splits the
+  # KV cache — risky at ~19/24 GB), so a voice turn arriving mid-coder-generation still waits for that
+  # generation to finish; the voice pipeline's spoken filler covers the residual wait. Temperature is
+  # raised vs the executor pin: natural speech, not deterministic code edits.
+  - model_name: qwen-voice
+    litellm_params:
+      model: openai/qwen-codex
+      api_base: os.environ/OLLAMA_BASE_URL
+      api_key: os.environ/OLLAMA_API_KEY
+      max_parallel_requests: 2
+      temperature: 0.6
+      # Voice can't afford Qwen's thinking preamble (~100-700 reasoning chunks before the first spoken
+      # token; measured 2026-07-04). Ollama's OpenAI endpoint disables it via reasoning_effort=none,
+      # but litellm rejects that param for openai/ backends unless allowlisted. Allowlist + pin it here
+      # so ANY caller of qwen-voice gets think-free responses with no client-side special-casing.
+      # (route-level extra_body/think:false was tested and is NOT forwarded by this litellm version.)
+      allowed_openai_params: ["reasoning_effort"]
+      reasoning_effort: "none"
+
+  # CLOUD manager brain — ChatGPT *subscription* (codex) via litellm's `chatgpt` provider (Responses
+  # API). Auth = a one-time "Sign in with ChatGPT" device login stored in CHATGPT_TOKEN_DIR
+  # (default ~/.config/litellm/chatgpt), kept SEPARATE from the Codex CLI's ~/.codex login so the two
+  # OAuth token lineages don't refresh-rotate each other out. litellm strips max_tokens/metadata here.
+  # Needs litellm new enough to have the chatgpt provider — the `proxy` Make target drops the 1.80.5 pin.
+  - model_name: chatgpt-codex
+    model_info:
+      mode: responses
+    litellm_params:
+      # The gpt-5.x-*codex* variants are gated to the real Codex CLI client and are REJECTED over the
+      # plain ChatGPT-account path; gpt-5.5 is accepted and is what your Codex CLI uses by default.
+      model: chatgpt/gpt-5.5
+      max_parallel_requests: 2
+      # MEASURED 2026-06-23: this route does NOT prompt-cache. litellm's chatgpt provider hard-forces
+      # store=False (chatgpt/responses/transformation.py), and the ChatGPT-subscription/Codex backend
+      # caches ONLY stored stateful sessions (store + previous_response_id, what the Codex CLI / codex_local
+      # agents use to hit ~90%). A probe of a stable ~10k-token prefix sent 4x back-to-back returned
+      # cached_tokens=0 every time. So this retention hint is currently INERT (accepted, not rejected) —
+      # kept as harmless + correct-if-the-route-ever-gains-stateless-caching. The real fix is a routing
+      # change (token-billed OpenAI key, or a stateful Codex-CLI planner), not a proxy knob.
+      prompt_cache_retention: "24h"
+
+litellm_settings:
+  num_retries: 1                        # ride out a brief backend hiccup; each retry re-sends the
+                                        # whole prompt, so keep it low on the paid chatgpt-codex route
+  request_timeout: 1200                 # local OpenSage/OpenCode turns can be long
+  callbacks: ["hooks.usage_logger_instance"]   # per-request + cumulative token logging (budget watch)
+  # ^ module ref is resolved RELATIVE to this config file's dir (proxy/) by litellm's get_instance_fn,
+  #   so it's `hooks` (= proxy/hooks.py), NOT `proxy.hooks` (which would look for proxy/proxy/hooks.py).
+
+general_settings:
+  # Global backstop across the backend — the keystone GPU cap. Ollama also serializes internally; this
+  # bounds how many requests the proxy forwards at once. Tune on the 24GB 3090.
+  global_max_parallel_requests: 6

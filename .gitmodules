@@ -1,0 +1,8 @@
+[submodule "vendor/paperclip"]
+	path = vendor/paperclip
+	url = https://github.com/IAmMarcellus/paperclip.git
+	branch = main
+[submodule "vendor/opensage-adk"]
+	path = vendor/opensage-adk
+	url = https://github.com/opensage-agent/opensage-adk
+	branch = main

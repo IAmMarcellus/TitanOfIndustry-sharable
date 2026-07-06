@@ -1,0 +1,11 @@
+# Fires memory-dream.service nightly at ~04:00 (low-traffic hour). See memory-dream.service for install.
+[Unit]
+Description=Run TitanOfIndustry memory consolidation (dreaming) nightly
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true           # catch up a missed run if the machine was asleep/off at 04:00
+RandomizedDelaySec=600    # jitter so it doesn't fire at the exact same instant as other timers
+
+[Install]
+WantedBy=timers.target

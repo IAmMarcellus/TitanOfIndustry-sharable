@@ -1,0 +1,63 @@
+# Research beats for the TitanOfIndustry intern (agent/research_intern.py).
+#
+# Each [[beat]] is one research target. `type` selects the runner:
+#   codebase  -> scoped read-only review of the trading-bot repo via opencode (local qwen-codex)
+#   web       -> fetch the listed URLs + summarize in one local-LLM call (needs INTERN_ENABLE_WEB=1)
+#   synthesis -> connect prior memories into testable ideas (one local-LLM call)
+#
+# This file is config-over-code: edit it to change WHAT gets researched; the loop logic never changes
+# (it's re-read every tick, so edits take effect without a restart). All beats write DRAFT, low-
+# confidence candidates — the local model is a scout, never a decider.
+#
+# Scoping codebase beats: name the exact `files` (injected into the prompt) and keep each beat small.
+# `dir` only points opencode at a subdir — it does NOT wall off the repo (opencode resolves the git
+# root), so the named files + the bounded INTERN_OPENCODE_TIMEOUT_S are what keep the read cheap.
+#
+# `min_interval_s` is a per-beat cooldown so one beat can't dominate the loop; `weight` biases the
+# pick among eligible beats (higher = chosen more often).
+
+[[beat]]
+name = "engine-risk-scan"
+type = "codebase"
+weight = 2.0
+min_interval_s = 21600        # at most every 6h
+dir = "~/Projects/AlgoCryptoTradingBot"
+files = [
+  "packages/algoCryptoTradingBot/algo_crypto_trading_bot/modules/trading/risk_manager.py",
+  "packages/algoCryptoTradingBot/algo_crypto_trading_bot/modules/trading/order_manager.py",
+  "packages/algoCryptoTradingBot/algo_crypto_trading_bot/modules/trading/execution/slice_executor.py",
+]
+tags = "redacted-company,engine,risk"
+prompt = """Read ONLY {files}. Review the order-execution and risk paths for latent bugs and unhandled
+edge cases: empty / NaN / zero-quantity inputs, partial fills, exchange/API errors, integer/float
+rounding on order sizes, and silent failure paths (swallowed exceptions, missing guards). Also flag
+risky hardcoded parameters (limits, thresholds, timeouts) that should be config. One finding each."""
+
+[[beat]]
+name = "crypto-market-signals"
+type = "web"
+weight = 1.0
+min_interval_s = 10800        # at most every 3h
+urls = [
+  "https://www.coindesk.com/markets/",
+  "https://cointelegraph.com/tags/markets",
+]
+query = "BTC ETH volatility regulation exchange outage this week"   # used only if INTERN_SEARCH_URL set
+max_chars = 12000
+tags = "redacted-company,market,news"
+prompt = """Extract concrete, time-stamped market/news/competitor/regulatory signals relevant to a
+crypto trading bot: volatility regime shifts, regulatory actions, exchange outages or listing changes,
+and notable competitor/strategy moves. Ignore generic price commentary. One finding per distinct
+signal, each with its source URL as evidence."""
+
+[[beat]]
+name = "strategy-idea-synthesis"
+type = "synthesis"
+weight = 1.0
+min_interval_s = 43200        # at most every 12h
+recall_query = "strategy edge cases, parameter tuning, recurring failures, risk limits"
+recall_k = 10
+tags = "redacted-company,strategy,idea"
+prompt = """From these prior memories, propose a few concrete, falsifiable strategy or hardening IDEAS
+that connect MULTIPLE memories (not a restatement of any single one). Each must be testable and
+reference the memory indices it draws on as evidence."""

@@ -1,0 +1,53 @@
+# OpenSage config for the TitanOfIndustry coding agent.
+#
+# All-local: the ORCHESTRATOR model is set in agent.py (LiteLlm -> vLLM /v1). The model_name
+# below is what framework plugins (summarizers) use; it resolves through LiteLLM env
+# (OPENAI_BASE_URL / OPENAI_API_KEY from .env) to the SAME vLLM-served Qwen, so nothing leaves the
+# machine. We do NOT use OpenSage's Neo4j memory — our own remember/recall tools (agent/memory.py)
+# back onto Neo4j Community instead; the `web` CLI also defaults to --no-neo4j_logging.
+#
+# Sandbox backend = "local": every tool (opencode_run, think, plan, finish_task, remember, recall)
+# is a plain host function, so we skip the Docker sandbox entirely. NOTE: backend="local" logs one
+# benign caught ERROR at startup ("Shared volumes are not supported in LocalSandbox") — the server
+# starts normally; we mount no volumes.
+
+task_name = "titanofindustry_coder_task"
+
+[sandbox]
+backend = "local"
+
+# History hygiene for a finite-context local model: summarize long tool outputs (OpenCode
+# transcripts get verbose) and compact old turns before they overflow the context window.
+[history]
+max_tool_response_length = 3000
+
+[history.events_compaction]
+max_history_summary_length = 50000
+compaction_percent = 60
+
+[llm]
+[llm.model_configs.main]
+model_name = "openai/qwen-codex"
+temperature = 0.2
+max_tokens = 4096
+
+# Reuse the same local Qwen for summarization (no second model/endpoint needed).
+[llm.model_configs.summarize]
+model_name = "inherit"
+temperature = 0.2
+max_tokens = 1024
+
+# Models a dynamic subagent may be pinned to (create_subagent model_name). Names resolve through the
+# LiteLLM proxy configured in the local environment.
+[agent_ensemble]
+available_models_for_ensemble = "openai/qwen-codex, openai/qwen-vl"
+
+[plugins]
+enabled = [
+    "doom_loop_detector_plugin",
+    "history_summarizer_plugin",
+    "tool_response_summarizer_plugin",
+    "quota_after_tool_plugin",
+    "periodic_snapshot_plugin",  # agent-local (agent/plugins/) — crash-resilient snapshots; cadence via SNAPSHOT_EVERY_N (default 1)
+    "concurrency_throttle_plugin",  # agent-local — MUST stay LAST: caps concurrent subagent calls (MAX_ACTIVE_SUBAGENTS); pairing relies on no later plugin short-circuiting
+]

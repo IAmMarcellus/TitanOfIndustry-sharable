@@ -1,0 +1,16 @@
+[project]
+name = "mergatroid-voice"
+version = "0.1.0"
+description = "Self-hosted Pipecat voice pipeline for the Mergatroid oversight call (replaces ElevenLabs when VOICE_PROVIDER=pipecat)."
+requires-python = ">=3.12"
+# Standalone on purpose: pipecat's tree (aiortc, onnxruntime, ctranslate2, kokoro-onnx) is heavy and
+# version-sensitive — it gets its own lockfile instead of riding the opensage-adk submodule's env.
+dependencies = [
+    "pipecat-ai[webrtc,silero,whisper,kokoro]==1.4.0",
+    "fastapi",
+    "uvicorn",
+    "httpx",
+]
+
+[tool.uv]
+# CPU-only service: keep torch-free / CUDA-free wheels where the resolver has a choice.

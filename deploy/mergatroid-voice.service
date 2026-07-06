@@ -1,0 +1,43 @@
+# Mergatroid voice — the self-hosted Pipecat sidecar for the HQ "Call Mergatroid" surface (voice/).
+# Fully local: Silero VAD + SmartTurn v3, faster-whisper STT (CPU), the 27B qwen-voice brain via the
+# LiteLLM proxy, Kokoro TTS (CPU). Only used when the Paperclip server runs VOICE_PROVIDER=pipecat;
+# the tmux path (`make voice` / `make stack ARGS='--with-voice'`) is the interactive alternative —
+# run ONE of the two, not both (same port).
+#
+# Install as a systemd --user unit:
+#
+#   mkdir -p ~/.config/systemd/user
+#   mkdir -p ~/.cache/titanofindustry     # MUST exist first: systemd opens the StandardOutput log
+#                                         # file before ExecStartPre runs, so it can't self-create it
+#   cp deploy/mergatroid-voice.service ~/.config/systemd/user/
+#   # edit WorkingDirectory below if your checkout isn't ~/Projects/TitanOfIndustry-sharable
+#   # set VOICE_* knobs in your shell profile or an EnvironmentFile if you need non-defaults
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now mergatroid-voice.service
+#   loginctl enable-linger "$USER"          # so it keeps running when you're logged out
+#
+# Inspect:  journalctl --user -u mergatroid-voice -f   (or tail the log file below)
+# Stop:     systemctl --user stop mergatroid-voice
+#
+# Prereqs: the LiteLLM proxy (`make proxy`, qwen-voice route) + Paperclip (`make paperclip`, tools /
+# digest / turn persistence). Both degrade gracefully mid-call (tools report "unavailable"), but a
+# call can't start without Paperclip (it relays the WebRTC signaling).
+[Unit]
+Description=Mergatroid voice (self-hosted Pipecat HQ-call sidecar)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/TitanOfIndustry-sharable
+ExecStartPre=/bin/mkdir -p %h/.cache/titanofindustry
+# Login shell so uv is on PATH. serve-voice.sh caps whisper's OMP threads (VOICE_WHISPER_THREADS).
+ExecStart=/bin/bash -lc 'exec bash scripts/serve-voice.sh'
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=30
+StandardOutput=append:%h/.cache/titanofindustry/voice.log
+StandardError=append:%h/.cache/titanofindustry/voice.log
+
+[Install]
+WantedBy=default.target
