@@ -145,6 +145,38 @@ name retained by the launch scripts. Attach to logs with:
 tmux attach -t titanofindustry
 ```
 
+Access the Paperclip website after the stack is up:
+
+```bash
+set -a; . ./.env; set +a
+echo "${PAPERCLIP_BASE_URL:-http://localhost:${PAPERCLIP_PORT}}"
+```
+
+Open the printed URL in a browser. The Paperclip service is the web
+governance/control-plane UI; the exact host and port come from your private
+`.env` file. If you expose Paperclip through a LAN hostname, Tailscale name, or
+tunnel, set `PAPERCLIP_BASE_URL` to that URL and include the hostname in
+`PAPERCLIP_ALLOWED_HOSTNAMES`.
+
+`make stack` does not start the Expo mobile app. To run it against the same
+Paperclip backend, start it in a second terminal after the stack is up:
+
+```bash
+set -a; . ./.env; set +a
+export EXPO_PUBLIC_API_BASE_URL="${PAPERCLIP_BASE_URL:-http://localhost:${PAPERCLIP_PORT}}"
+
+cd vendor/paperclip/mobile
+pnpm start
+```
+
+Then open the app from the Expo/Metro prompt. For a physical phone, use a URL
+the phone can reach, such as a LAN IP, Tailscale hostname, or tunnel URL,
+instead of `localhost`; Android emulators usually need `http://10.0.2.2:<port>`.
+If you need a native dev build, run `pnpm ios` or `pnpm android` from
+`vendor/paperclip/mobile`. For an iOS build that reaches a plain `http://`
+non-localhost hostname, set `EXPO_PUBLIC_ATS_INSECURE_DOMAIN` to that hostname
+before running the app.
+
 Stop the stack:
 
 ```bash
