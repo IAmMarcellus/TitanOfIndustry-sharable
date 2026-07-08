@@ -1,9 +1,13 @@
 # TitanOfIndustry-sharable
 
-TitanOfIndustry-sharable is an public-safe snapshot of a local-first agent
-stack that connects a governance UI, an orchestrator, an executor, shared
-memory, and an optional voice sidecar:
+TitanOfIndustry-sharable is an public-safe snapshot of a
+multi-agent operations stack for autonomous workflows. It wires together
+Paperclip, OpenSage, OpenCode, LiteLLM, local Qwen/Ollama/vLLM models, and Neo4j
+memory so agents can plan work, delegate coding tasks, coordinate through issues,
+remember prior decisions, and optionally run through a voice interface.
 
+It includes a custom local multi-agent stack of an orchestrator, an executor, shared
+memory, and an optional voice sidecar:
 ```text
 Paperclip UI/control plane
   -> OpenSage orchestrator
@@ -13,6 +17,7 @@ Paperclip UI/control plane
   -> Neo4j shared memory
   -> optional Pipecat voice sidecar
 ```
+This stack runs as single agent to assign tasks and interact with other agents.
 
 This repository is the glue layer: configuration, launch scripts, OpenSage agent
 code, memory tools, Paperclip integration, and local service wiring.
