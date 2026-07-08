@@ -1,6 +1,6 @@
 # TitanOfIndustry-sharable
 
-TitanOfIndustry-sharable is an interview-safe snapshot of a local-first agent
+TitanOfIndustry-sharable is an public-safe snapshot of a local-first agent
 stack that connects a governance UI, an orchestrator, an executor, shared
 memory, and an optional voice sidecar:
 
