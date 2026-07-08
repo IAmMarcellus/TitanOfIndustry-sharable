@@ -20,7 +20,8 @@ Paperclip UI/control plane
 This stack runs as single agent to assign tasks and interact with other agents.
 
 This repository is the glue layer: configuration, launch scripts, OpenSage agent
-code, memory tools, Paperclip integration, and local service wiring.
+code, memory tools, Paperclip integration, and local service wiring. It also
+heavily customizes the forked repos and implements a mobile app to manage the platform.
 
 ## Sanitized Snapshot
 
